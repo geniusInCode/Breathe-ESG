@@ -13,6 +13,7 @@ export default function App() {
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
   const [themePreset, setThemePreset] = useState(localStorage.getItem("theme-preset") || "emerald");
   const [themeBlur, setThemeBlur] = useState(parseInt(localStorage.getItem("theme-blur") || "12"));
+  const [clientId, setClientId] = useState(localStorage.getItem("breathe_client_id") || "1");
 
   useEffect(() => {
     const fullTheme = `${theme}-${themePreset}`;
@@ -27,6 +28,11 @@ export default function App() {
 
   const toggleTheme = () => {
     setTheme(t => (t === "light" ? "dark" : "light"));
+  };
+
+  const handleClientChange = (newId) => {
+    localStorage.setItem("breathe_client_id", newId);
+    setClientId(newId);
   };
 
   const navItem = (p, label, icon) => {
@@ -107,7 +113,33 @@ export default function App() {
           </nav>
 
           {/* Right Accessories */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {/* Workspace / Tenant Selector */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>Workspace:</span>
+              <select
+                value={clientId}
+                onChange={(e) => handleClientChange(e.target.value)}
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                  outline: "none",
+                  transition: "border-color 0.2s"
+                }}
+              >
+                <option value="1">🏢 Workspace Alpha</option>
+                <option value="2">🏢 Workspace Beta</option>
+                <option value="3">🏢 Workspace Gamma</option>
+                <option value="4">🏢 Workspace Delta</option>
+              </select>
+            </div>
+
             {/* Dark Mode Switcher */}
             <button
               onClick={toggleTheme}
@@ -123,11 +155,11 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="container" style={{ paddingBottom: 80 }}>
-        {page === "dashboard"  && <Dashboard />}
-        {page === "upload"     && <Upload />}
-        {page === "review"     && <Review />}
-        {page === "simulator"  && <Simulator />}
-        {page === "audit"      && <AuditTrail />}
+        {page === "dashboard"  && <Dashboard key={clientId} />}
+        {page === "upload"     && <Upload key={clientId} />}
+        {page === "review"     && <Review key={clientId} />}
+        {page === "simulator"  && <Simulator key={clientId} />}
+        {page === "audit"      && <AuditTrail key={clientId} />}
         {page === "theme"      && (
           <ThemeSettings
             theme={theme}

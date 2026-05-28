@@ -74,7 +74,7 @@ def parse(file_bytes: bytes, plant_lookup: dict = None):
         try:
             import math
             qty = float(str(row['quantity']).replace(',', '.'))
-            if math.isnan(qty): raise ValueError("Quantity is NaN")
+            if math.isnan(qty) or math.isinf(qty): raise ValueError("Quantity is NaN or Infinite")
             unit = str(row.get('unit', 'L')).strip().upper()
 
             desc = str(row.get('material_desc', ''))

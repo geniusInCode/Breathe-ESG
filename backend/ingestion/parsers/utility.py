@@ -33,7 +33,7 @@ def parse(file_bytes: bytes, grid_region: str = 'UK'):
         try:
             import math
             kwh   = float(str(row['consumption_kwh']).replace(',', ''))
-            if math.isnan(kwh): raise ValueError("Consumption is NaN")
+            if math.isnan(kwh) or math.isinf(kwh): raise ValueError("Consumption is NaN or Infinite")
             start = pd.to_datetime(row['billing_start']).date()
 
             end   = pd.to_datetime(row['billing_end']).date()

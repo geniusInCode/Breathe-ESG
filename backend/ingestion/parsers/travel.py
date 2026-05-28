@@ -82,21 +82,36 @@ def parse(file_bytes: bytes):
                 act, unit = dist, 'km'
 
             elif 'HOTEL' in category or 'ACCOMMODATION' in category:
-                nights = float(row.get('nights', row.get('quantity', 1)))
+                try:
+                    nights = float(row.get('nights', row.get('quantity', 1)))
+                    if math.isnan(nights) or math.isinf(nights) or nights <= 0:
+                        raise ValueError
+                except Exception:
+                    nights = 1.0
                 ef     = TRAVEL_FACTORS['hotel']
                 kgco2e = nights * ef
                 cat_key, sub, act, unit = 'hotel', '', nights, 'nights'
                 flagged, flag_reason = False, ''
 
             elif 'RAIL' in category or 'TRAIN' in category:
-                dist   = float(row.get('distance_km', row.get('distance', 100)))
+                try:
+                    dist = float(row.get('distance_km', row.get('distance', 100)))
+                    if math.isnan(dist) or math.isinf(dist) or dist <= 0:
+                        raise ValueError
+                except Exception:
+                    dist = 100.0
                 ef     = TRAVEL_FACTORS['rail']
                 kgco2e = dist * ef
                 cat_key, sub, act, unit = 'rail', '', dist, 'km'
                 flagged, flag_reason = False, ''
 
             elif 'CAR' in category or 'TAXI' in category or 'GROUND' in category:
-                dist   = float(row.get('distance_km', row.get('distance', 50)))
+                try:
+                    dist = float(row.get('distance_km', row.get('distance', 50)))
+                    if math.isnan(dist) or math.isinf(dist) or dist <= 0:
+                        raise ValueError
+                except Exception:
+                    dist = 50.0
                 ef_key = 'taxi' if 'TAXI' in category else 'car_rental'
                 ef     = TRAVEL_FACTORS[ef_key]
                 kgco2e = dist * ef

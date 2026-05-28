@@ -6,6 +6,26 @@ from .parsers import sap, utility, travel
 from .serializers import EmissionRecordSerializer, IngestionRunSerializer
 
 
+def _get_or_create_client(client_id):
+    client_names = {
+        1: "Workspace Alpha",
+        2: "Workspace Beta",
+        3: "Workspace Gamma",
+        4: "Workspace Delta",
+    }
+    try:
+        cid = int(client_id)
+    except (ValueError, TypeError):
+        cid = 1
+    name = client_names.get(cid, f"Workspace {cid}")
+    slug = f"workspace-{cid}"
+    client, _ = Client.objects.get_or_create(
+        id=cid,
+        defaults={'name': name, 'slug': slug}
+    )
+    return client
+
+
 class UploadView(APIView):
     def post(self, request):
         source_type = request.data.get('source_type')
@@ -15,10 +35,7 @@ class UploadView(APIView):
         if not file_obj or source_type not in ('SAP', 'UTILITY', 'TRAVEL'):
             return Response({'error': 'source_type and file required'}, status=400)
 
-        client, _ = Client.objects.get_or_create(
-            id=client_id,
-            defaults={'name': 'Demo Client', 'slug': 'demo'}
-        )
+        client = _get_or_create_client(client_id)
         run = IngestionRun.objects.create(
             client=client,
             source_type=source_type,
@@ -57,14 +74,43 @@ class UploadView(APIView):
 
 def _clean_nan_records():
     import math
-    from django.db.models import Q
-    # Scan and purge any legacy records with NaN float values from previous runs
-    for r in EmissionRecord.objects.all():
-        try:
-            if math.isnan(r.normalised_kgco2e) or math.isnan(r.activity_value) or math.isnan(r.emission_factor):
-                r.delete()
-        except Exception:
-            pass
+    from django.db import connection
+    try:
+        # DB-level cleanup for high performance
+        with connection.cursor() as cursor:
+            if connection.vendor == 'postgresql':
+                cursor.execute("""
+                    DELETE FROM ingestion_emissionrecord 
+                    WHERE normalised_kgco2e IS NULL 
+                       OR activity_value IS NULL 
+                       OR emission_factor IS NULL
+                       OR normalised_kgco2e = 'NaN'::double precision
+                       OR activity_value = 'NaN'::double precision
+                       OR emission_factor = 'NaN'::double precision
+                """)
+            else:
+                cursor.execute("""
+                    DELETE FROM ingestion_emissionrecord 
+                    WHERE normalised_kgco2e IS NULL 
+                       OR activity_value IS NULL 
+                       OR emission_factor IS NULL
+                       OR normalised_kgco2e != normalised_kgco2e
+                       OR activity_value != activity_value
+                       OR emission_factor != emission_factor
+                """)
+    except Exception:
+        # Fallback to python-based iteration
+        for r in EmissionRecord.objects.all():
+            try:
+                is_bad = False
+                for val in (r.normalised_kgco2e, r.activity_value, r.emission_factor):
+                    if val is None or math.isnan(val) or math.isinf(val):
+                        is_bad = True
+                        break
+                if is_bad:
+                    r.delete()
+            except Exception:
+                pass
 
 class RecordsView(APIView):
     def get(self, request):
@@ -134,12 +180,23 @@ class StatsView(APIView):
         qs = EmissionRecord.objects.filter(client_id=client_id)
 
         qs_list = list(qs)
+        
+        def safe_float(val):
+            if val is None:
+                return 0.0
+            try:
+                import math
+                f = float(val)
+                return 0.0 if math.isnan(f) or math.isinf(f) else f
+            except (ValueError, TypeError):
+                return 0.0
+
         return Response({
-            'total_kgco2e': sum(r.normalised_kgco2e for r in qs_list),
+            'total_kgco2e': sum(safe_float(r.normalised_kgco2e) for r in qs_list),
             'by_scope': {
-                1: sum(r.normalised_kgco2e for r in qs_list if r.scope == 1),
-                2: sum(r.normalised_kgco2e for r in qs_list if r.scope == 2),
-                3: sum(r.normalised_kgco2e for r in qs_list if r.scope == 3),
+                1: sum(safe_float(r.normalised_kgco2e) for r in qs_list if r.scope == 1),
+                2: sum(safe_float(r.normalised_kgco2e) for r in qs_list if r.scope == 2),
+                3: sum(safe_float(r.normalised_kgco2e) for r in qs_list if r.scope == 3),
             },
             'pending':  qs.filter(status='PENDING').count(),
             'approved': qs.filter(status='APPROVED').count(),
@@ -242,8 +299,11 @@ class RecordUpdateView(APIView):
         try:
             activity_value = float(request.data.get('activity_value', record.activity_value))
             emission_factor = float(request.data.get('emission_factor', record.emission_factor))
+            import math
+            if math.isnan(activity_value) or math.isinf(activity_value) or math.isnan(emission_factor) or math.isinf(emission_factor):
+                raise ValueError
         except (ValueError, TypeError):
-            return Response({'error': 'activity_value and emission_factor must be numbers'}, status=400)
+            return Response({'error': 'activity_value and emission_factor must be valid finite numbers'}, status=400)
 
         activity_unit = request.data.get('activity_unit', record.activity_unit)
         emission_factor_source = request.data.get('emission_factor_source', record.emission_factor_source)
@@ -338,10 +398,7 @@ class LoadDemoDataView(APIView):
             with open(sample_path, 'rb') as f:
                 file_bytes = f.read()
                 
-            client, _ = Client.objects.get_or_create(
-                id=client_id,
-                defaults={'name': 'Demo Client', 'slug': 'demo'}
-            )
+            client = _get_or_create_client(client_id)
             run = IngestionRun.objects.create(
                 client=client,
                 source_type=source_type,
