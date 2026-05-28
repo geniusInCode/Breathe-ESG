@@ -10,6 +10,7 @@ The application is fully deployed and accessible at:
 
 ## 🚀 Key Features
 
+* **Concurrent Multi-Workspace Isolation**: Supports multiple users collaborating or working independently at the same time. Analysts can toggle between isolated workspaces (Workspace Alpha, Beta, Gamma, Delta) via a dropdown selector in the header. The app stores active client environments in `localStorage` and routes/key-binds page components to avoid state leaking or data overwrites.
 * **Scope Ingestion Hub (Scope 1/2/3)**: Parses flat files from enterprise SAP exports (Tab-delimited ALV), utility portals (CSV billing cycles), and corporate travel platforms (Concur/Navan flights, hotels, and ground transport logs).
 * **Data Normalization Engine**: Standardizes activity metrics on-the-fly (e.g., gallons to litres, IATA airport codes to great-circle kilometer distances, hotel nights, kWh) and computes carbon footprints in kgCO₂e using DEFRA 2023 and India CEA grid emission factors.
 * **Smart Verification Queue**: Flags database entries with anomalies (e.g., unusually long billing cycles, missing descriptors, unknown airport codes) for analyst inspection.
@@ -85,6 +86,20 @@ If you don't have sample files on hand to upload, you can instantly populate the
    npm run dev
    ```
    *The client app will be available at: http://localhost:5173*
+
+---
+
+## 🧪 Validation & Automated Tests
+The application includes a comprehensive test suite covering parser edge cases (NaN float handling), raw SQL database purges, serializers, manual adjustment validations, and dynamic workspace naming:
+
+1. Navigate to the backend folder:
+   ```bash
+   cd backend
+   ```
+2. Run the test suite:
+   ```bash
+   python manage.py test ingestion
+   ```
 
 ---
 
