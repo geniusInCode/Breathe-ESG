@@ -1,4 +1,8 @@
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const BASE = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000/api'
+    : `${window.location.origin}/api`);
+
 
 export const uploadFile = (sourceType, file) => {
   const fd = new FormData();
