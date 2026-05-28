@@ -55,9 +55,22 @@ class UploadView(APIView):
             return Response({'error': str(e)}, status=500)
 
 
+def _clean_nan_records():
+    import math
+    from django.db.models import Q
+    # Scan and purge any legacy records with NaN float values from previous runs
+    for r in EmissionRecord.objects.all():
+        try:
+            if math.isnan(r.normalised_kgco2e) or math.isnan(r.activity_value) or math.isnan(r.emission_factor):
+                r.delete()
+        except Exception:
+            pass
+
 class RecordsView(APIView):
     def get(self, request):
+        _clean_nan_records()
         qs = EmissionRecord.objects.select_related('ingestion_run', 'client').order_by('-created_at')
+
         status_f  = request.query_params.get('status')
         scope_f   = request.query_params.get('scope')
         flagged_f = request.query_params.get('flagged')
@@ -116,8 +129,10 @@ class LockView(APIView):
 
 class StatsView(APIView):
     def get(self, request):
+        _clean_nan_records()
         client_id = request.query_params.get('client_id', 1)
         qs = EmissionRecord.objects.filter(client_id=client_id)
+
         qs_list = list(qs)
         return Response({
             'total_kgco2e': sum(r.normalised_kgco2e for r in qs_list),

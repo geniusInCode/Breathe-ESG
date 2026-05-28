@@ -72,8 +72,11 @@ def parse(file_bytes: bytes, plant_lookup: dict = None):
 
     for idx, row in df.iterrows():
         try:
+            import math
             qty = float(str(row['quantity']).replace(',', '.'))
+            if math.isnan(qty): raise ValueError("Quantity is NaN")
             unit = str(row.get('unit', 'L')).strip().upper()
+
             desc = str(row.get('material_desc', ''))
             fuel_type = _infer_fuel_type(desc)
             plant = str(row.get('plant_code', '')).strip()

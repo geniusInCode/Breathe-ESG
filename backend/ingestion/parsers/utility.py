@@ -31,8 +31,11 @@ def parse(file_bytes: bytes, grid_region: str = 'UK'):
 
     for idx, row in df.iterrows():
         try:
+            import math
             kwh   = float(str(row['consumption_kwh']).replace(',', ''))
+            if math.isnan(kwh): raise ValueError("Consumption is NaN")
             start = pd.to_datetime(row['billing_start']).date()
+
             end   = pd.to_datetime(row['billing_end']).date()
             days  = (end - start).days
 

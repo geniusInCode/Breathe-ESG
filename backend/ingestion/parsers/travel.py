@@ -64,8 +64,9 @@ def parse(file_bytes: bytes):
 
                 try:
                     dist = float(str(dist).replace(',', ''))
-                    if dist <= 0: raise ValueError
+                    if dist <= 0 or math.isnan(dist): raise ValueError
                 except Exception:
+
                     if origin in AIRPORT_COORDS and dest in AIRPORT_COORDS:
                         c1, c2 = AIRPORT_COORDS[origin], AIRPORT_COORDS[dest]
                         dist = _haversine_km(c1[0], c1[1], c2[0], c2[1])
